@@ -53,17 +53,6 @@ Conditions:
   HasCustomRole: !Not [ !Equals [!Ref 'Role', ''] ]
 
 Mappings:
-  # Hard values for the subnet masks. These masks define
-  # the range of internal IP addresses that can be assigned.
-  # The VPC can have all IP's from 10.0.0.0 to 10.0.255.255
-  # There are two subnets which cover the ranges:
-  #
-  # 10.0.0.0 - 10.0.0.255
-  # 10.0.1.0 - 10.0.1.255
-  #
-  # If you need more IP addresses (perhaps you have so many
-  # instances that you run out) then you can customize these
-  # ranges to add more
   SubnetConfig:
     VPC:
       CIDR: '10.0.0.0/16'
@@ -74,7 +63,7 @@ Mappings:
 Resources:
   # VPC in which containers will be networked.
   # It has two public subnets
-  # We distribute the subnets across the first two available subnets
+  # We distribute the subnets across the first two available zones
   # for the region, for high availability.
   VPC:
     Type: AWS::EC2::VPC
@@ -105,9 +94,7 @@ Resources:
       CidrBlock: !FindInMap ['SubnetConfig', 'PublicTwo', 'CIDR']
       MapPublicIpOnLaunch: true
 
-  # Setup networking resources for the public subnets. Containers
-  # in the public subnets have public IP addresses and the routing table
-  # sends network traffic via the internet gateway.
+  
   InternetGateway:
     Type: AWS::EC2::InternetGateway
   GatewayAttachement:
@@ -141,14 +128,6 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
 
-  # A security group for the containers we will run in Fargate.
-  # Two rules, allowing network traffic from a public facing load
-  # balancer and from other members of the security group.
-  #
-  # Remove any of the following ingress rules that are not needed.
-  # If you want to make direct requests to a container using its
-  # public IP address you'll need to add a security group rule
-  # to allow traffic from all IP addresses.
   FargateContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -169,15 +148,7 @@ Resources:
       IpProtocol: -1
       SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
 
-  # Load balancers for getting traffic to containers.
-  # This sample template creates one load balancer:
-  #
-  # - One public load balancer, hosted in public subnets that is accessible
-  #   to the public, and is intended to route traffic to one or more public
-  #   facing services.
-
-  # A public facing load balancer, this is used for accepting traffic from the public
-  # internet and directing it to public facing microservices
+  
   PublicLoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -186,7 +157,7 @@ Resources:
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
-            IpProtocol: -1
+            IpProtocol: 80
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -227,10 +198,7 @@ Resources:
       Port: 80
       Protocol: HTTP
 
-  # This is an IAM role which authorizes ECS to manage resources on your
-  # account on your behalf, such as updating your load balancer with the
-  # details of where your containers are, so that traffic can reach your
-  # containers.
+  
   ECSRole:
     Type: AWS::IAM::Role
     Properties:
@@ -247,8 +215,6 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-              # Rules which allow ECS to attach network interfaces to instances
-              # on your behalf in order for awsvpc networking mode to work right
               - 'ec2:AttachNetworkInterface'
               - 'ec2:CreateNetworkInterface'
               - 'ec2:CreateNetworkInterfacePermission'
@@ -257,8 +223,6 @@ Resources:
               - 'ec2:Describe*'
               - 'ec2:DetachNetworkInterface'
 
-              # Rules which allow ECS to update load balancers on your behalf
-              # with the information sabout how to send traffic to your containers
               - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
               - 'elasticloadbalancing:DeregisterTargets'
               - 'elasticloadbalancing:Describe*'
@@ -266,7 +230,6 @@ Resources:
               - 'elasticloadbalancing:RegisterTargets'
             Resource: '*'
 
-  # This is a role which is used by the ECS tasks themselves.
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -294,11 +257,7 @@ Resources:
                 - 'logs:PutLogEvents'
               Resource: '*'
 
-# These are the values output by the CloudFormation template. Be careful
-# about changing any of them, because of them are exported with specific
-# names so that the other task related CF templates can use them.
-  # The task definition. This is a simple metadata description of what
-  # container to run, and what resource requirements it has.
+
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -323,9 +282,7 @@ Resources:
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
 
-  # The service. The service is a resource which allows you to run multiple
-  # copies of a type of task, and gather up their logs and metrics, as well
-  # as monitor the number of running tasks and replace any that have crashed
+  
   Service:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
@@ -352,11 +309,7 @@ Resources:
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
 
-  # A target group. This is used for keeping track of all the tasks, and
-  # what IP addresses / port numbers they have. You can query it yourself,
-  # to use the addresses yourself, but most often this target group is just
-  # connected to an application load balancer, or network load balancer, so
-  # it can automatically distribute traffic across all the targets.
+  
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
