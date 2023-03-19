@@ -154,7 +154,7 @@ Resources:
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Scheme: internet-facing
+      Scheme: internet-facing 
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
         Value: '30'
