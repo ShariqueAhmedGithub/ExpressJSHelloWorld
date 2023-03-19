@@ -4,11 +4,6 @@ pipeline {
             GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
         }
         stages {
-        stage('Git Clone') {
-            steps {
-                git 'https://github.com/ShariqueAhmedGithub/ExpressJSHelloWorld.git'
-            }
-        }
         stage('Build Image') { 
             steps {
                 script{

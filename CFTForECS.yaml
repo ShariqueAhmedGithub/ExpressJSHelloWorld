@@ -22,11 +22,9 @@ Parameters:
   ContainerCpu:
     Type: Number
     Default: 256
-    Description: How much CPU to give the container. 1024 is 1 CPU
   ContainerMemory:
     Type: Number
     Default: 512
-    Description: How much memory in megabytes to give the container
   Path:
     Type: String
     Default: "*"
@@ -37,7 +35,7 @@ Parameters:
     Type: Number
     Default: 1
     Description: The priority for the routing rule added to the load balancer.
-                 This only applies if your have multiple services which have been
+                 This only applies if you have multiple services which have been
                  assigned to different paths on the load balancer.
   DesiredCount:
     Type: Number
@@ -61,10 +59,6 @@ Mappings:
     PublicTwo:
       CIDR: '10.0.1.0/24'
 Resources:
-  # VPC in which containers will be networked.
-  # It has two public subnets
-  # We distribute the subnets across the first two available zones
-  # for the region, for high availability.
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -72,7 +66,6 @@ Resources:
       EnableDnsHostnames: true
       CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
 
-  # Two public subnets, where containers can have public IP addresses
   PublicSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
